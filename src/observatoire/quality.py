@@ -54,10 +54,31 @@ def check_unique_key(df: pd.DataFrame, key: list[str]) -> Check:
     return Check(f"Clé unique {key}", n == 0, f"{n} lignes en doublon sur la clé")
 
 
-def check_code_commune_format(df: pd.DataFrame, column: str = "code_commune") -> Check:
-    valid = df[column].astype("string").str.fullmatch(r"\d{5}|2[AB]\d{3}", na=False)
+def check_key_complete(df: pd.DataFrame, key: list[str]) -> Check:
+    n = int(df[key].isna().any(axis=1).sum())
+    return Check(f"Clé complète {key}", n == 0, f"{n} lignes avec une clé manquante")
+
+
+def check_uai_format(df: pd.DataFrame, column: str = "uai") -> Check:
+    """UAI : 7 chiffres puis une lettre (ex. 0930917S)."""
+    valid = df[column].astype("string").str.fullmatch(r"\d{7}[A-Z]", na=False)
     n = int((~valid).sum())
-    return Check("Format des codes communes", n == 0, f"{n} codes invalides")
+    return Check("Format des UAI", n == 0, f"{n} UAI invalides")
+
+
+def check_allowed_values(df: pd.DataFrame, column: str, allowed: list[str]) -> Check:
+    """Toutes les valeurs (manquantes comprises) doivent appartenir à `allowed`."""
+    bad = ~df[column].isin(allowed)
+    exemples = sorted(df.loc[bad, column].astype(str).unique())[:5]
+    return Check(f"Valeurs autorisées de {column} {allowed}", not bad.any(), f"{int(bad.sum())} hors liste {exemples}")
+
+
+def check_presence(df: pd.DataFrame, column: str = "presence") -> Check:
+    """Alerte : lignes présentes dans une seule source (perdues par une jointure interne)."""
+    counts = df[column].value_counts().to_dict()
+    seules = len(df) - counts.get("les_deux", 0)
+    detail = ", ".join(f"{k} : {v}" for k, v in sorted(counts.items()))
+    return Check("Présence dans les deux sources", seules == 0, detail, gravite=ALERTE)
 
 
 def check_missing(df: pd.DataFrame, columns: list[str]) -> Check:
@@ -81,17 +102,31 @@ def check_not_empty(df: pd.DataFrame) -> Check:
     return Check("Table non vide", len(df) > 0, f"{len(df)} lignes")
 
 
-def run_checks(df: pd.DataFrame, key: list[str]) -> QualityReport:
-    """Contrôles par défaut. Ajoutez les vôtres : chaque hypothèse sur les données mérite un contrôle."""
+REQUIRED = [
+    "uai", "annee", "nom_etablissement", "code_departement", "secteur",
+    "ips", "nb_candidats_g", "taux_reussite_g", "va_taux_reussite_g", "presence",
+]
+
+
+def run_checks(df: pd.DataFrame, key: list[str], departements: list[str] | None = None) -> QualityReport:
+    """Contrôles du jeu final. Chaque hypothèse sur les données a son contrôle."""
     report = QualityReport()
-    required = ["code_commune", "nom_commune", "departement", "annee", "population", "indicateur"]
     report.add(check_not_empty(df))
-    report.add(check_required_columns(df, required))
+    report.add(check_required_columns(df, REQUIRED))
     if not report.ok:
         return report
+    # Bloquants : ce qui rendrait les résultats faux.
+    report.add(check_key_complete(df, key))
     report.add(check_unique_key(df, key))
-    report.add(check_code_commune_format(df))
-    report.add(check_range(df, "population", low=0))
-    report.add(check_range(df, "annee", low=1900, high=2100))
-    report.add(check_missing(df, ["population", "indicateur"]))
+    report.add(check_uai_format(df))
+    report.add(check_allowed_values(df, "secteur", ["public", "privé"]))
+    if departements is not None:
+        report.add(check_allowed_values(df, "code_departement", departements))
+    report.add(check_range(df, "annee", low=2000, high=2100))
+    report.add(check_range(df, "ips", low=0))
+    report.add(check_range(df, "nb_candidats_g", low=0))
+    report.add(check_range(df, "taux_reussite_g", low=0, high=100))
+    # Alertes : ce qu'il faut montrer à l'utilisateur, sans arrêter le pipeline.
+    report.add(check_presence(df))
+    report.add(check_missing(df, ["ips", "taux_reussite_g", "va_taux_reussite_g"]))
     return report

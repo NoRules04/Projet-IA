@@ -52,15 +52,106 @@ def to_numeric_fr(values: pd.Series) -> pd.Series:
     return pd.to_numeric(text, errors="coerce")
 
 
-def clean_sample(df: pd.DataFrame) -> pd.DataFrame:
-    """Nettoyage de l'échantillon fourni. À adapter (ou dupliquer) pour chacune de vos sources."""
-    out = normalize_columns(df)
-    out["code_commune"] = clean_code_commune(out["code_commune"])
-    out["nom_commune"] = out["nom_commune"].astype("string").str.strip()
-    out["annee"] = pd.to_numeric(out["annee"], errors="coerce").astype("Int64")
-    out["population"] = to_numeric_fr(out["population"]).astype("Int64")
-    out["indicateur"] = to_numeric_fr(out["indicateur"])
-    out["departement"] = departement_from_code(out["code_commune"])
-    # Doublons stricts : supprimés. Doublons de clé avec valeurs différentes : laissés, le contrôle qualité les signale.
-    out = out.drop_duplicates()
-    return out[["code_commune", "nom_commune", "departement", "annee", "population", "indicateur"]]
+# --- Collèges : IPS et IVAC ---------------------------------------------------
+
+# D-006 : seules ces quatre modalités existent dans les fichiers du 2026-11-13.
+SECTEUR = {
+    "public": "public",              # IPS
+    "privé sous contrat": "privé",   # IPS
+    "PU": "public",                  # IVAC
+    "PR": "privé",                   # IVAC
+}
+
+# Colonnes communes aux deux sources, combinées après la jointure (IPS prioritaire).
+COLONNES_PARTAGEES = ["nom_etablissement", "commune", "code_departement", "departement", "secteur"]
+
+PRESENCE = {"both": "les_deux", "left_only": "ips_seul", "right_only": "ivac_seul"}
+
+
+def clean_text(values: pd.Series) -> pd.Series:
+    """Texte sans espaces superflus ; une chaîne vide devient manquante."""
+    text = values.astype("string").str.strip()
+    return text.mask(text == "")
+
+
+def clean_uai(values: pd.Series) -> pd.Series:
+    """Identifiant d'établissement en majuscules, sans espaces (ex. « 0930917s » → « 0930917S »)."""
+    return clean_text(values).str.upper()
+
+
+def harmonize_secteur(values: pd.Series) -> pd.Series:
+    """« public » / « privé » (D-006). Une valeur inconnue devient manquante : elle n'est pas devinée."""
+    return clean_text(values).map(SECTEUR).astype("string")
+
+
+def session_from_annee_scolaire(values: pd.Series) -> pd.Series:
+    """« 2024-2025 » → 2025 (session du brevet de cette année scolaire, D-005). Format inattendu → manquant."""
+    parts = clean_text(values).str.extract(r"^(\d{4})-(\d{4})$")
+    debut = pd.to_numeric(parts[0], errors="coerce")
+    fin = pd.to_numeric(parts[1], errors="coerce")
+    return fin.where(fin == debut + 1).astype("Int64")
+
+
+def filter_academie(df: pd.DataFrame, code: str) -> pd.DataFrame:
+    """Garde les lignes d'une académie, d'après son code (D-008)."""
+    return df[clean_text(df["code_academie"]) == code]
+
+
+def clean_ips(df: pd.DataFrame, code_academie: str) -> pd.DataFrame:
+    """Source ips_colleges : filtre académique, typage, une ligne par (uai, annee)."""
+    out = filter_academie(normalize_columns(df), code_academie).copy()
+    res = pd.DataFrame(
+        {
+            "uai": clean_uai(out["uai"]),
+            "annee": session_from_annee_scolaire(out["annee_scolaire"]),
+            "nom_etablissement": clean_text(out["nom_de_l_etablissement"]),
+            "code_commune": clean_code_commune(out["code_commune_insee"]),
+            "commune": clean_text(out["libelle_commune"]),
+            "code_departement": clean_text(out["code_departement"]),
+            "departement": clean_text(out["libelle_departement"]),
+            "secteur": harmonize_secteur(out["secteur"]),
+            "ips": to_numeric_fr(out["ips"]),
+            "ecart_type_ips": to_numeric_fr(out["ecart_type_de_l_ips"]),
+        }
+    )
+    # Doublons stricts : supprimés. Doublons de clé avec valeurs différentes : gardés, le contrôle qualité les signale.
+    return res.drop_duplicates().reset_index(drop=True)
+
+
+def clean_ivac(df: pd.DataFrame, code_academie: str) -> pd.DataFrame:
+    """Source ivac_colleges : filtre académique, typage, une ligne par (uai, annee)."""
+    out = filter_academie(normalize_columns(df), code_academie).copy()
+    res = pd.DataFrame(
+        {
+            "uai": clean_uai(out["uai"]),
+            "annee": pd.to_numeric(clean_text(out["session"]), errors="coerce").astype("Int64"),
+            "nom_etablissement": clean_text(out["nom_de_l_etablissement"]),
+            "commune": clean_text(out["commune"]),
+            "code_departement": clean_text(out["code_departement"]),
+            "departement": clean_text(out["departement"]),
+            "secteur": harmonize_secteur(out["secteur"]),
+            "nb_candidats_g": to_numeric_fr(out["nb_candidats_g"]).astype("Int64"),
+            "taux_reussite_g": to_numeric_fr(out["taux_de_reussite_g"]),
+            "va_taux_reussite_g": to_numeric_fr(out["va_du_taux_de_reussite_g"]),
+        }
+    )
+    return res.drop_duplicates().reset_index(drop=True)
+
+
+def join_sources(ips: pd.DataFrame, ivac: pd.DataFrame, key: list[str]) -> pd.DataFrame:
+    """Jointure complète sur `key`, limitée aux années communes (D-007, D-008).
+
+    Les collèges présents dans une seule source sont gardés et étiquetés dans `presence`.
+    """
+    annees = sorted(set(ips["annee"].dropna()) & set(ivac["annee"].dropna()))
+    ips = ips[ips["annee"].isin(annees)]
+    ivac = ivac[ivac["annee"].isin(annees)]
+    merged = ips.merge(ivac, on=key, how="outer", suffixes=("_ips", "_ivac"), indicator=True)
+    for col in COLONNES_PARTAGEES:
+        merged[col] = merged[f"{col}_ips"].combine_first(merged[f"{col}_ivac"])
+    merged["presence"] = merged["_merge"].astype(str).map(PRESENCE).astype("string")
+    colonnes = [
+        "uai", "annee", "nom_etablissement", "commune", "code_commune", "code_departement", "departement",
+        "secteur", "ips", "ecart_type_ips", "nb_candidats_g", "taux_reussite_g", "va_taux_reussite_g", "presence",
+    ]
+    return merged[colonnes].sort_values(key).reset_index(drop=True)

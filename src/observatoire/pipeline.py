@@ -12,32 +12,38 @@ import sys
 
 import pandas as pd
 
-from observatoire.clean import clean_sample
-from observatoire.collect import collect_all
-from observatoire.config import KEY, OUTPUT_CSV, PROCESSED, QUALITY_REPORT, SAMPLE
+from observatoire.clean import clean_ips, clean_ivac, join_sources
+from observatoire.collect import collect_all, read_raw
+from observatoire.config import (
+    CODE_ACADEMIE,
+    DEPARTEMENTS_ACADEMIE,
+    KEY,
+    OUTPUT_CSV,
+    PROCESSED,
+    QUALITY_REPORT,
+    SAMPLE_FILES,
+    load_sources,
+)
 from observatoire.quality import QualityError, run_checks
 
 
+def build_dataset(paths: dict, verbose: bool = True) -> pd.DataFrame:
+    """Lit, nettoie et joint les deux sources ; `paths` = {id de source: fichier brut}."""
+    sources = {s["id"]: s for s in load_sources()}
+    ips = clean_ips(read_raw(sources["ips_colleges"], paths["ips_colleges"]), CODE_ACADEMIE)
+    ivac = clean_ivac(read_raw(sources["ivac_colleges"], paths["ivac_colleges"]), CODE_ACADEMIE)
+    df = join_sources(ips, ivac, KEY)
+    if verbose:
+        print(f"[pipeline] Académie {CODE_ACADEMIE} : {len(ips)} lignes IPS, {len(ivac)} lignes IVAC (toutes années)")
+        print(f"[pipeline] Années communes retenues : {sorted(df['annee'].unique().tolist())}")
+        print("[pipeline] Présence après jointure, par année :")
+        print(pd.crosstab(df["annee"], df["presence"]).to_string())
+    return df
+
+
 def load_sample() -> pd.DataFrame:
-    raw = pd.read_csv(SAMPLE / "exemple_communes.csv", sep=";", dtype=str, encoding="utf-8")
-    return clean_sample(raw)
-
-
-def build_dataset(paths: dict) -> pd.DataFrame:
-    """À ÉCRIRE PAR LE BINÔME (jalon J2).
-
-    1. Lire chaque fichier de `paths` (séparateur, encodage, types : voir sources.yaml).
-    2. Nettoyer chaque source (fonctions de clean.py ; ajoutez les vôtres, testées).
-    3. Joindre les sources sur la clé commune, en mesurant les lignes perdues :
-           merged = left.merge(right, on="code_commune", how="left", indicator=True)
-           perdues = (merged["_merge"] == "left_only").sum()
-       et consigner ce chiffre dans la data card.
-    4. Retourner une table aux colonnes attendues par quality.run_checks.
-    """
-    raise NotImplementedError(
-        "build_dataset() n'est pas encore écrit : lancez `python -m observatoire.pipeline --sample` "
-        "en attendant, puis complétez src/observatoire/pipeline.py."
-    )
+    """Même traitement que les vraies données, sur les extraits versionnés de data/sample/."""
+    return build_dataset(SAMPLE_FILES, verbose=False)
 
 
 def run(sample: bool = False) -> pd.DataFrame:
@@ -48,7 +54,7 @@ def run(sample: bool = False) -> pd.DataFrame:
         paths = collect_all()
         df = build_dataset(paths)
 
-    report = run_checks(df, key=KEY)
+    report = run_checks(df, key=KEY, departements=DEPARTEMENTS_ACADEMIE)
     PROCESSED.mkdir(parents=True, exist_ok=True)
     QUALITY_REPORT.write_text(report.to_markdown(), encoding="utf-8")
     print(report.to_markdown())
