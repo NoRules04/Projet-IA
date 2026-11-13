@@ -19,6 +19,16 @@ Une entrée par décision, la plus récente en haut. On ne supprime pas une entr
 
 ---
 
+## D-009 — Règle de priorité d'accompagnement
+
+- Date : 2026-11-13
+- Auteur(s) : Mohamed Rayen Aissa
+- Contexte : définir « défavorisé » et « sous-performant » pour construire la liste prioritaire (question ouverte de la note de cadrage).
+- Options envisagées : (A) IPS < médiane de l'académie et VA < 0, par session ; (B) IPS < médiane et VA ≤ -5 (≈ premier quartile), par session ; (C) IPS < médiane et VA < 0 aux deux sessions 2024 et 2025
+- Décision : (C) pour la liste prioritaire ; liste triée par valeur ajoutée moyenne sur les deux sessions, de la plus basse à la plus haute, pour que le rectorat puisse retenir les 10 ou 20 premiers ; A et B restent visibles dans le tableau de bord à titre de comparaison, avec un sélecteur
+- Justification / preuve : la VA est instable d'une année à l'autre (corrélation 0,53 entre 2024 et 2025 ; 116 collèges sur 410 changent de signe), donc une difficulté répétée est plus fiable ; guide IVAC 2025 : un écart de 2 points est « trop faible pour en tirer des conclusions ». Médiane IPS des collèges de l'académie = 100,9 (2024 et 2025), calculée sur toute l'académie et non sur la sélection filtrée. Effectifs : A = 121 (2024) / 96 (2025) ; B = 72 / 47 ; C = 72 collèges. IPS égal à la médiane → « haut » ; VA = 0 → « positive ou nulle » ; collège sans VA à l'une des deux sessions → non classable (31 collèges), montré à part.
+- Statut : validée
+
 ## D-008 — Filtre académique par code et jointure qui conserve les collèges non appariés
 
 - Date : 2026-11-13

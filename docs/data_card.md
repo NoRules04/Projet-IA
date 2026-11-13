@@ -66,6 +66,7 @@
 - fichier avec BOM ; secteur codé « PU » / « PR » (harmonisé, D-006).
 
 **Biais connus** :
+- un collège n'apparaît pas du tout dans le fichier si moins de 20 élèves sont présents au brevet en série générale (guide IVAC 2025) ;
 - la valeur ajoutée n'est **pas calculée** (« ND ») sous 40 candidats en série générale, ni quand moins de 75 % des scores de 6e ou des professions des parents sont retrouvés (guide IVAC 2025) : les petits collèges et ceux aux données incomplètes disparaissent des analyses ;
 - 15 des 26 valeurs ajoutées manquantes en 2024-2025 concernent des collèges privés, alors que le privé représente 71 collèges sur 441 : **le privé est sous-représenté** dans les analyses de valeur ajoutée ;
 - seule la **série générale** du brevet a une valeur ajoutée (pas la série professionnelle) ;
@@ -83,7 +84,7 @@
 | Fichier | `data/processed/observatoire.csv` |
 | Lignes / colonnes | 882 lignes × 14 colonnes = 441 collèges × 2 sessions (2024 et 2025) ; 370 publics et 71 privés ; 159 en Seine-Saint-Denis, 150 en Seine-et-Marne, 132 dans le Val-de-Marne |
 | Lignes écartées avant la jointure | **Volontairement**, années présentes dans une seule source (D-007) : 443 lignes IPS de la rentrée 2025-2026 et 846 lignes IVAC des sessions 2022 et 2023 |
-| Lignes perdues à la jointure | **0** : la jointure est complète (D-008). **23 lignes (2,6 %) sont présentes seulement dans IPS** (`presence = ips_seul` : 13 en 2024, 10 en 2025), soit 13 collèges différents (15 lignes privées, 8 publiques ; 11 en Seine-et-Marne, 6 en Seine-Saint-Denis, 6 dans le Val-de-Marne). 3 de ces collèges figurent dans IVAC pour d'autres sessions. La raison de leur absence n'est pas documentée dans les sources : **à vérifier**. 0 ligne présente seulement dans IVAC. |
+| Lignes perdues à la jointure | **0** : la jointure est complète (D-008). **23 lignes (2,6 %) sont présentes seulement dans IPS** (`presence = ips_seul` : 13 en 2024, 10 en 2025), soit 13 collèges différents (15 lignes privées, 8 publiques ; 11 en Seine-et-Marne, 6 en Seine-Saint-Denis, 6 dans le Val-de-Marne). 3 de ces collèges figurent dans IVAC pour d'autres sessions. Explication probable, non confirmée collège par collège : le guide IVAC 2025 indique qu'« au moins 20 élèves » doivent être présents en série générale pour que les indicateurs soient calculés, sinon la fiche n'est pas publiée (le plus petit collège présent dans IVAC a justement 20 candidats). **À vérifier.** 0 ligne présente seulement dans IVAC. |
 | Valeurs manquantes par colonne | `nb_candidats_g` : 23 (2,6 %) ; `taux_reussite_g` : 23 (2,6 %) ; `va_taux_reussite_g` : 49 (5,6 %), soit les 23 lignes `ips_seul` + 26 lignes dont la valeur ajoutée n'est pas calculée par la DEPP ; toutes les autres colonnes : 0 |
 | Contrôles qualité | 11 contrôles bloquants OK, 2 alertes (présence, valeurs manquantes) : voir `data/processed/rapport_qualite.md` |
 
@@ -99,3 +100,7 @@
 6. **Secteur** harmonisé en « public » / « privé » : `harmonize_secteur` (D-006).
 7. **Doublons stricts** supprimés : `clean_ips`, `clean_ivac`.
 8. **Années communes** seulement, puis **jointure complète** sur (uai, annee) avec la colonne `presence`. Pour le nom, la commune, le département et le secteur, IPS est prioritaire : `join_sources` (D-007, D-008).
+9. **Règle de priorité** (D-009), dans `src/observatoire/priority.py`, appliquée après l'export :
+   - « IPS bas » = IPS inférieur à la médiane des collèges de l'académie (100,9 en 2024 et en 2025) ;
+   - un collège est prioritaire s'il a un IPS bas et une valeur ajoutée négative aux deux sessions ;
+   - 72 collèges, écrits dans `data/processed/liste_prioritaire.csv` ; 31 collèges ne sont pas classables, faute de valeur ajoutée à au moins une session (dont 13 absents d'IVAC).
