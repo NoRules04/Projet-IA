@@ -9,3 +9,6 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+
+# Aide personnelle de révision (pas un livrable)
+docs/guide_revision.md
