@@ -15,6 +15,7 @@ SOURCES_FILE = ROOT / "sources.yaml"
 
 OUTPUT_CSV = PROCESSED / "observatoire.csv"
 QUALITY_REPORT = PROCESSED / "rapport_qualite.md"
+PRIORITY_CSV = PROCESSED / "liste_prioritaire.csv"  # règle C (D-009)
 
 # Clé qui identifie une ligne du jeu final : un collège (UAI) une année (session du brevet, D-005).
 KEY = ["uai", "annee"]

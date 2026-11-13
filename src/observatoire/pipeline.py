@@ -19,11 +19,13 @@ from observatoire.config import (
     DEPARTEMENTS_ACADEMIE,
     KEY,
     OUTPUT_CSV,
+    PRIORITY_CSV,
     PROCESSED,
     QUALITY_REPORT,
     SAMPLE_FILES,
     load_sources,
 )
+from observatoire.priority import liste_prioritaire
 from observatoire.quality import QualityError, run_checks
 
 
@@ -64,6 +66,10 @@ def run(sample: bool = False) -> pd.DataFrame:
 
     df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8")
     print(f"[pipeline] {len(df)} lignes écrites dans {OUTPUT_CSV}")
+
+    liste = liste_prioritaire(df)
+    liste.to_csv(PRIORITY_CSV, index=False, encoding="utf-8")
+    print(f"[pipeline] {len(liste)} collèges prioritaires (règle C, D-009) écrits dans {PRIORITY_CSV}")
     return df
 
 
