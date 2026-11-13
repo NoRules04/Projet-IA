@@ -19,6 +19,46 @@ Une entrée par décision, la plus récente en haut. On ne supprime pas une entr
 
 ---
 
+## D-008 — Filtre académique par code et jointure qui conserve les collèges non appariés
+
+- Date : 2026-11-13
+- Auteur(s) : Mohamed Rayen Aissa
+- Contexte : filtrer Créteil, puis joindre IPS et IVAC sur (uai, annee).
+- Options envisagées : filtre par libellé « CRETEIL » ou par code « 24 » ; jointure interne (on ne garde que les collèges présents des deux côtés) ou jointure complète avec une colonne de provenance
+- Décision : filtre par code académie « 24 » (identique dans les deux fichiers, insensible à l'orthographe) ; jointure complète (outer) avec une colonne `presence` = « les_deux » / « ips_seul » / « ivac_seul »
+- Justification / preuve : critère de succès n° 3 de la note de cadrage (« les collèges aux données manquantes sont signalés et comptés, pas masqués ») ; le nombre de collèges non appariés est publié dans le rapport qualité.
+- Statut : validée
+
+## D-007 — Années retenues : uniquement les années communes
+
+- Date : 2026-11-13
+- Auteur(s) : Mohamed Rayen Aissa
+- Contexte : IPS couvre les sessions 2024 à 2026, IVAC les sessions 2022 à 2025.
+- Options envisagées : (A) années communes seulement ; (B) toutes les années, avec des trous
+- Décision : (A) sessions 2024 et 2025
+- Justification / preuve : la question croise IPS et valeur ajoutée, qui doivent être présents la même année.
+- Statut : validée
+
+## D-006 — Harmonisation du secteur
+
+- Date : 2026-11-13
+- Auteur(s) : Mohamed Rayen Aissa
+- Contexte : IPS code « public » / « privé sous contrat », IVAC code « PU » / « PR ».
+- Options envisagées : (A) deux valeurs « public » / « privé » ; (B) garder les codes d'origine
+- Décision : (A) ; toute valeur inconnue devient manquante et est signalée par un contrôle qualité
+- Justification / preuve : valeurs observées le 2026-11-13 (seules ces 4 modalités existent) ; aucun collège de Créteil ne change de secteur entre les deux fichiers (367 public/PU, 64 privé/PR).
+- Statut : validée
+
+## D-005 — Correspondance entre session du brevet et année scolaire
+
+- Date : 2026-11-13
+- Auteur(s) : Mohamed Rayen Aissa
+- Contexte : IPS est daté par rentrée (« 2024-2025 »), IVAC par session du brevet (« 2025 »).
+- Options envisagées : (A) session N ↔ année scolaire (N-1)-N ; (B) session N ↔ rentrée N-(N+1)
+- Décision : (A) ; la colonne commune `annee` contient l'année de la session (ex. 2025 = rentrée 2024-2025)
+- Justification / preuve : guide méthodologique IVAC 2025 (pièce jointe de la source ivac_colleges) : « élèves inscrits à la rentrée N-1 au brevet en juin N ».
+- Statut : validée
+
 ## D-004 — Télécharger les fichiers nationaux et filtrer Créteil dans le code
 
 - Date : 2026-11-13
