@@ -6,11 +6,15 @@ SHA-256) : on peut ainsi prouver quelle version des données a produit quel rés
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
+import sys
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+
+import pandas as pd
 
 from observatoire.config import RAW, load_sources
 
@@ -64,3 +68,44 @@ def _update_manifest(dest_dir: Path, source: dict, dest: Path) -> None:
 def collect_all(force: bool = False) -> dict[str, Path]:
     """Télécharge toutes les sources ; retourne {id: chemin local}."""
     return {s["id"]: download(s, force=force) for s in load_sources()}
+
+
+def read_raw(source: dict, path: Path) -> pd.DataFrame:
+    """Lit un fichier brut avec le séparateur et l'encodage déclarés dans sources.yaml.
+
+    Tout est lu en texte (dtype=str) : le typage se fait ensuite dans clean.py,
+    ce qui évite de perdre un zéro initial (UAI « 0930917S », codes département).
+    """
+    if source.get("format", "csv") != "csv":
+        raise ValueError(f"Format « {source.get('format')} » non pris en charge pour « {source['id']} ».")
+    return pd.read_csv(
+        path,
+        sep=source.get("separateur", ";"),
+        encoding=source.get("encodage", "utf-8"),
+        dtype=str,
+    )
+
+
+def load_all(force: bool = False) -> dict[str, pd.DataFrame]:
+    """Télécharge (si besoin) puis charge toutes les sources ; retourne {id: table brute}."""
+    sources = {s["id"]: s for s in load_sources()}
+    paths = collect_all(force=force)
+    return {sid: read_raw(sources[sid], path) for sid, path in paths.items()}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Télécharge et charge les sources de sources.yaml")
+    parser.add_argument("--force", action="store_true", help="retélécharger même si le fichier existe")
+    args = parser.parse_args()
+    try:
+        tables = load_all(force=args.force)
+    except (ValueError, OSError) as error:
+        print(f"[collect] ERREUR : {error}", file=sys.stderr)
+        return 1
+    for sid, df in tables.items():
+        print(f"[collect] {sid} : {df.shape[0]} lignes, {df.shape[1]} colonnes")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

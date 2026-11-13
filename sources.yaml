@@ -1,34 +1,36 @@
 # Provenance des données — une entrée par source.
 # Le pipeline télécharge chaque `url` dans data/raw/<fichier>.
 # Remplissez tous les champs : la data card et le rapport s'appuient dessus.
+# Informations relevées le 2026-11-13 via l'API de data.gouv.fr et celle de data.education.gouv.fr.
 
 sources:
-  - id: source_1
-    nom: "[Nom du jeu de données]"
-    producteur: "[Organisme producteur]"
-    page: "https://www.data.gouv.fr/fr/datasets/[slug]/"   # page de présentation
-    url: ""                                                  # lien direct vers le fichier (CSV, XLSX, JSON…)
-    fichier: source_1.csv                                    # nom du fichier dans data/raw/
+  - id: ips_colleges
+    nom: "Indices de position sociale des collèges (à partir de 2023)"
+    producteur: "DEPP, ministère chargé de l'Éducation nationale"
+    page: "https://www.data.gouv.fr/datasets/ips-colleges-a-partir-de-2023"
+    url: "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-ips-colleges-ap2023/exports/csv?use_labels=true"
+    fichier: ips_colleges.csv
     format: csv
     separateur: ";"
-    encodage: utf-8
-    licence: "[ex. : Licence Ouverte 2.0]"
-    date_acces: "AAAA-MM-JJ"
-    maille: "[commune | département | établissement | …]"
-    periode: "[AAAA–AAAA]"
-    cle_jointure: "[ex. : code_commune]"
+    encodage: utf-8-sig   # les fichiers commencent par un BOM (octets EF BB BF)
+    # data.gouv.fr affiche « non spécifiée » ; la fiche du producteur (data.education.gouv.fr) indique Licence Ouverte v2.0.
+    licence: "Licence Ouverte v2.0 (Etalab), selon data.education.gouv.fr"
+    date_acces: "2026-11-13"
+    maille: établissement (collège)
+    periode: "rentrées 2023-2024 à 2025-2026"
+    cle_jointure: uai
 
-  - id: source_2
-    nom: "[Nom du jeu de données]"
-    producteur: "[Organisme producteur]"
-    page: ""
-    url: ""
-    fichier: source_2.csv
+  - id: ivac_colleges
+    nom: "Indicateurs de valeur ajoutée des collèges"
+    producteur: "DEPP, ministère chargé de l'Éducation nationale"
+    page: "https://www.data.gouv.fr/datasets/indicateurs-de-valeur-ajoutee-des-colleges"
+    url: "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-indicateurs-valeur-ajoutee-colleges/exports/csv?use_labels=true"
+    fichier: ivac_colleges.csv
     format: csv
     separateur: ";"
-    encodage: utf-8
-    licence: ""
-    date_acces: "AAAA-MM-JJ"
-    maille: ""
-    periode: ""
-    cle_jointure: ""
+    encodage: utf-8-sig   # les fichiers commencent par un BOM (octets EF BB BF)
+    licence: "Licence Ouverte v2.0 (Etalab)"
+    date_acces: "2026-11-13"
+    maille: établissement (collège)
+    periode: "sessions 2022 à 2025"
+    cle_jointure: uai
