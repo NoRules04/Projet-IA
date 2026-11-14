@@ -19,6 +19,16 @@ Une entrée par décision, la plus récente en haut. On ne supprime pas une entr
 
 ---
 
+## D-011 — Organisation et accessibilité du tableau de bord
+
+- Date : 2026-11-14
+- Auteur(s) : Mohamed Rayen Aissa
+- Contexte : 7 écrans demandés, avec des filtres communs, des sources visibles et des contrastes suffisants.
+- Options envisagées : (A) une seule longue page ; (B) un écran par fichier, menu et filtres communs dans la barre latérale ; thème : (1) laisser le choix clair/sombre au navigateur ; (2) imposer le thème clair
+- Décision : (B) et (2) ; calculs dans `src/observatoire/vues.py` (testés), affichage dans `app/` ; filtre « session » à une seule valeur, les écrans qui utilisent les deux sessions le disent
+- Justification / preuve : contrastes calculés selon WCAG sur fond blanc (bleu #1F4E79 : 8,7:1 ; gris #595959 : 7,0:1 ; minimum demandé 4,5:1) ; un thème imposé permet de garantir ces contrastes ; tests `tests/test_app.py` et `tests/test_vues.py`.
+- Statut : validée
+
 ## D-010 — Présentation de l'ordre de priorité
 
 - Date : 2026-11-13
