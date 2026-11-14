@@ -19,6 +19,26 @@ Une entrée par décision, la plus récente en haut. On ne supprime pas une entr
 
 ---
 
+## D-013 — Écrire le sens des corrélations en mots
+
+- Date : 2026-11-14
+- Auteur(s) : Mohamed Rayen Aissa
+- Contexte : le public du rectorat ne sait pas lire un coefficient r seul.
+- Options envisagées : (A) chiffre seul ; (B) mot puis chiffre, selon une règle fixe
+- Décision : (B) ; seuils de Cohen sur |r| : < 0,10 quasi nul ; 0,10–0,30 faible ; 0,30–0,50 modéré ; ≥ 0,50 fort ; mot choisi sur la valeur arrondie affichée
+- Justification / preuve : seuils conventionnels (Cohen, 1988) ; fonction `qualifier_correlation` testée aux bornes (`tests/test_vues.py`) ; résultat : IPS/taux « Lien fort (r = 0,73) », IPS/VA « Lien faible (r = -0,28) » en 2025.
+- Statut : validée
+
+## D-012 — Encodage visuel de la vue d'ensemble
+
+- Date : 2026-11-14
+- Auteur(s) : Mohamed Rayen Aissa
+- Contexte : montrer les collèges prioritaires parmi ~420 points, de façon lisible sans la couleur.
+- Options envisagées : (A) une couleur par groupe (4 couleurs) ; (B) mise en évidence : prioritaires en triangles pleins bleus, autres en cercles vides gris, zone encadrée et nommée
+- Décision : (B) ; bleu #2a78d6 et gris #8c8c8c ; tableau des données sous le graphique ; corrélations affichées seulement à partir de 10 collèges
+- Justification / preuve : validateur de palette (bleu : bande de luminosité, séparation daltonisme ΔE 15,3, contraste ≥ 3:1 OK ; gris volontairement neutre) ; forme + remplissage + légende écrite : l'information ne repose pas sur la couleur ; r(IPS, taux) = 0,77 / 0,73 et r(IPS, VA) = -0,14 / -0,28 justifient l'usage de la VA.
+- Statut : validée
+
 ## D-011 — Organisation et accessibilité du tableau de bord
 
 - Date : 2026-11-14

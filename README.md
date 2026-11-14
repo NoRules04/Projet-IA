@@ -1,11 +1,12 @@
-# Observatoire décisionnel — [titre de votre observatoire]
+# Observatoire décisionnel — Quels collèges accompagner en priorité dans l'académie de Créteil ?
 
 > PRJ450 · Projet IA — Visualisation de données avancée · M1 Mastère Expert IT · École 89
-> Binôme : [Nom Prénom] · [Nom Prénom]
+> Binôme : Mohamed Rayen Aissa · Mouhamad Aicha
+> Dépôt : https://github.com/NoRules04/Projet-IA
 
-**Problématique** : [une phrase interrogative, reprise de `docs/note_cadrage.md`]
-**Public cible** : [persona en une ligne]
-**Décision éclairée** : [ce que le public fera du résultat, et quand]
+**Problématique** : Parmi les collèges socialement défavorisés de l'académie de Créteil, lesquels obtiennent au brevet des résultats inférieurs à ceux attendus pour leur profil, et doivent être accompagnés en priorité à la rentrée 2027 ?
+**Public cible** : chargé(e) de mission au rectorat de l'académie de Créteil, peu de temps, à l'aise avec un tableur mais pas avec le code.
+**Décision éclairée** : proposer une liste de collèges prioritaires pour un dispositif d'accompagnement, avant la préparation de la rentrée 2027.
 
 ---
 
@@ -44,7 +45,7 @@ Prérequis : Python 3.11 ou plus récent, Git.
 
 ```bash
 # 1. Cloner et créer l'environnement
-git clone [URL du dépôt] && cd [dossier]
+git clone https://github.com/NoRules04/Projet-IA.git && cd Projet-IA
 python -m venv .venv
 source .venv/bin/activate          # Windows : .venv\Scripts\activate
 pip install -r requirements.txt
