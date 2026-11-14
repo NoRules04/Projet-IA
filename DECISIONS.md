@@ -19,6 +19,16 @@ Une entrée par décision, la plus récente en haut. On ne supprime pas une entr
 
 ---
 
+## D-010 — Présentation de l'ordre de priorité
+
+- Date : 2026-11-13
+- Auteur(s) : Mohamed Rayen Aissa
+- Contexte : la liste est triée par VA moyenne pour permettre de retenir 10 ou 20 collèges, mais les VA sont des points entiers et 5 collèges ont la même VA moyenne (-9,5) autour de la 10e place.
+- Options envisagées : (A) couper strictement à 10 ou 20 (égalités départagées par UAI) ; (B) quand le rectorat choisit « les N premiers », inclure tous les collèges à égalité avec le N-ième, et l'annoncer
+- Décision : (B) ; le nombre de collèges ajoutés par égalité est annoncé à l'écran
+- Justification / preuve : guide IVAC 2025 (écart de 2 points « trop faible pour en tirer des conclusions ») ; égalités mesurées sur `data/processed/liste_prioritaire.csv`. Vocabulaire : « ordre de priorité », jamais « rang » ni « classement ».
+- Statut : validée
+
 ## D-009 — Règle de priorité d'accompagnement
 
 - Date : 2026-11-13
