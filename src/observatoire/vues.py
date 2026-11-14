@@ -84,3 +84,43 @@ def texte_source(sources: list[dict], sessions: list[int]) -> str:
         f"et « {par_id['ivac_colleges']['nom']} » (session{pluriel} {libelle_sessions}). "
         f"{', '.join(licences)}. Consulté le {', '.join(dates)}."
     )
+
+
+# --- Formatage -----------------------------------------------------------------
+
+def fr(valeur: float | None, decimales: int = 1) -> str:
+    """Nombre à la française : 100.9 → « 100,9 » ; -0.14 → « -0,14 » ; manquant → « — »."""
+    if valeur is None or pd.isna(valeur):
+        return "—"
+    return f"{valeur:,.{decimales}f}".replace(",", " ").replace(".", ",")
+
+
+# --- Écran 2 : vue d'ensemble ---------------------------------------------------------
+
+MIN_POUR_CORRELATION = 10
+
+
+def vue_ensemble(df: pd.DataFrame, filtres: Filtres, regle: str) -> tuple[pd.DataFrame, dict]:
+    """Points de la session choisie (avec `prioritaire`) et chiffres clés de l'écran 2.
+
+    `df` = toute l'académie : la médiane et la règle C sont calculées AVANT les filtres.
+    """
+    from observatoire.priority import marquer_prioritaires, mediane_ips, seuil_va
+
+    complet = df.assign(prioritaire=marquer_prioritaires(df, regle))
+    selection = appliquer_filtres(complet, filtres)
+    places = selection.dropna(subset=["ips", "va_taux_reussite_g"])
+    n = len(places)
+    resume = {
+        "session": filtres.session,
+        "regle": regle,
+        "mediane_ips": float(mediane_ips(df).get(filtres.session)),
+        "seuil_va": seuil_va(regle),
+        "n_selection": len(selection),
+        "n_places": n,
+        "n_prioritaires": int(places["prioritaire"].sum()),
+        "n_sans_va": int(selection["va_taux_reussite_g"].isna().sum()),
+        "r_ips_taux": places["ips"].corr(places["taux_reussite_g"]) if n >= MIN_POUR_CORRELATION else None,
+        "r_ips_va": places["ips"].corr(places["va_taux_reussite_g"]) if n >= MIN_POUR_CORRELATION else None,
+    }
+    return places, resume

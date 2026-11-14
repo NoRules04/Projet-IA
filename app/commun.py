@@ -25,6 +25,39 @@ from observatoire.vues import (  # noqa: E402
 ACCENT = "#1F4E79"  # bleu foncé, contraste 8,7:1 sur blanc (calculé selon WCAG)
 GRIS = "#595959"    # gris foncé, contraste 7,0:1 sur blanc
 
+# Marques des graphiques (palette vérifiée avec le validateur de couleurs, D-012) :
+# on met en évidence les collèges prioritaires, on grise les autres ; la forme diffère aussi.
+MARQUE_PRIORITAIRE = "#2a78d6"  # bleu, triangles pleins
+MARQUE_CONTEXTE = "#8c8c8c"     # gris neutre, cercles vides (≥ 3:1 sur blanc)
+ENCRE = "#262626"               # texte des annotations
+
+DOSSIER_APP = Path(__file__).resolve().parent
+
+# Les 7 écrans, dans l'ordre du récit : (fichier dans app/, titre du menu).
+ECRANS = [
+    ("pages/accueil.py", "1. Accueil"),
+    ("pages/vue_ensemble.py", "2. Vue d'ensemble"),
+    ("pages/groupes.py", "3. Les quatre groupes"),
+    ("pages/liste_prioritaire.py", "4. Liste prioritaire"),
+    ("pages/comparaisons.py", "5. Comparaisons"),
+    ("pages/donnees_manquantes.py", "6. Données manquantes"),
+    ("pages/methode.py", "7. Méthode et limites"),
+]
+PAGE_LISTE = "pages/liste_prioritaire.py"
+
+# Affiché sur l'écran 7 « Méthode et limites ».
+CREDITS = "Réalisé par Mohamed Rayen Aissa et Mouhamad Aicha, Mastère Expert IT, École 89"
+
+
+def ecrans_disponibles() -> list[tuple[str, str]]:
+    """Écrans dont le fichier existe (les écrans sont construits un par un)."""
+    return [(f, t) for f, t in ECRANS if (DOSSIER_APP / f).exists()]
+
+
+def ecran_disponible(fichier: str) -> bool:
+    return (DOSSIER_APP / fichier).exists()
+
+
 MESSAGE_FICHIER_ABSENT = (
     "Les données préparées sont introuvables (`data/processed/observatoire.csv`).\n\n"
     "Lancez d'abord le pipeline dans un terminal, depuis le dossier du projet :\n\n"
@@ -89,6 +122,13 @@ def barre_filtres(df: pd.DataFrame) -> Filtres:
 
 
 def filtres_courants() -> Filtres:
+    """Filtres choisis dans la barre latérale ; par défaut (tout sélectionné) s'ils n'existent pas encore."""
+    if "filtres" not in st.session_state:
+        df = donnees_ou_arret()
+        sessions = sorted(int(a) for a in df["annee"].dropna().unique())
+        st.session_state["filtres"] = Filtres(
+            departements=list(libelles_departements(df)), secteurs=["public", "privé"], session=sessions[-1]
+        )
     return st.session_state["filtres"]
 
 

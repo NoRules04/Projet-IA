@@ -43,3 +43,41 @@ def test_vocabulaire_sans_classement(donnees_presentes):
     assert "priorité d'accompagnement" in texte
     for interdit in ["palmarès", "mauvais collège", "meilleurs collèges", "classement des"]:
         assert interdit not in texte
+
+
+def test_accueil_sans_code_interne_et_avec_bouton_liste(donnees_presentes):
+    at = lancer()
+    texte = " ".join(m.value for m in at.markdown)
+    assert "D-0" not in texte  # les codes de décision sont réservés à l'écran Méthode et limites
+    assert any(b.label == "Voir la liste prioritaire" for b in at.button)
+
+
+def ouvrir(page: str) -> AppTest:
+    at = AppTest.from_file(str(APP / "app.py"), default_timeout=60).run()
+    at.switch_page(page)
+    return at.run()
+
+
+def test_vue_ensemble_s_affiche_avec_les_trois_regles(donnees_presentes):
+    at = ouvrir("pages/vue_ensemble.py")
+    assert not at.exception
+    assert at.title[0].value.startswith("Vue d'ensemble")
+    for regle in ["C", "A", "B"]:
+        at.radio(key="regle_vue_ensemble").set_value(regle).run()
+        assert not at.exception, regle
+        assert [m.label for m in at.metric][:4] == [
+            "Collèges dans la sélection", "Placés sur le graphique", "Dans la zone prioritaire", "Sans valeur ajoutée",
+        ]
+        assert any("Source : DEPP" in c.value for c in at.caption)
+
+
+def test_vue_ensemble_aucun_departement_message_clair(donnees_presentes):
+    from observatoire.vues import Filtres
+
+    # AppTest exécute l'écran sans repasser par app.py : on fixe les filtres directement.
+    at = AppTest.from_file(str(APP / "app.py"), default_timeout=60).run()
+    at.switch_page("pages/vue_ensemble.py")
+    at.session_state["filtres"] = Filtres(departements=[], secteurs=["public", "privé"], session=2025)
+    at.run()
+    assert not at.exception
+    assert any("Aucun département" in w.value for w in at.warning)

@@ -102,6 +102,31 @@ def liste_prioritaire(df: pd.DataFrame) -> pd.DataFrame:
     return liste
 
 
+REGLE_RETENUE = "C"
+LIBELLES_REGLES = {
+    "C": "Règle retenue : IPS bas et VA négative aux deux sessions",
+    "A": "Comparaison A : IPS bas et VA négative, cette session seulement",
+    "B": "Comparaison B : IPS bas et VA ≤ -5, cette session seulement",
+}
+
+
+def seuil_va(regle: str) -> float:
+    """Seuil de valeur ajoutée de la règle (0 pour A et C, -5 pour B)."""
+    return REGLES[regle]["seuil"] if regle in REGLES else 0.0
+
+
+def marquer_prioritaires(df: pd.DataFrame, regle: str = REGLE_RETENUE) -> pd.Series:
+    """Vrai pour chaque ligne collège × session dont le collège est prioritaire selon `regle`.
+
+    Règle C : le collège est dans `liste_prioritaire` (mêmes valeurs aux deux sessions).
+    Règles A et B : la ligne est dans le groupe prioritaire de SA session.
+    `df` doit contenir toute l'académie (la médiane en dépend).
+    """
+    if regle == "C":
+        return df["uai"].isin(set(liste_prioritaire(df)["uai"]))
+    return classer_session(df, regle)["groupe"] == G_PRIORITAIRE
+
+
 def non_classables(df: pd.DataFrame) -> pd.DataFrame:
     """Collèges sans VA à au moins une session (absents d'IVAC ou VA non calculée) : à montrer à part."""
     manque = df[df["va_taux_reussite_g"].isna()]

@@ -11,6 +11,16 @@ st.markdown(
     "obtiennent au brevet des résultats **inférieurs à ceux attendus pour leur profil**, et doivent être "
     "accompagnés en priorité à la rentrée 2027 ?"
 )
+
+if commun.ecran_disponible(commun.PAGE_LISTE):
+    if st.button("Voir la liste prioritaire", type="primary", icon="➡️"):
+        st.switch_page(commun.PAGE_LISTE)
+else:
+    st.button(
+        "Voir la liste prioritaire", type="primary", icon="➡️", disabled=True,
+        help="Disponible avec l'écran 4 (en cours de construction).",
+    )
+
 st.markdown(
     "**Pour qui.** Les chargés de mission du rectorat qui préparent la liste des collèges à accompagner. "
     "L'outil s'utilise dans un navigateur, sans connaissance technique."
@@ -39,7 +49,7 @@ st.markdown(
   **attendu** pour des élèves comparables. **Une VA négative signifie des résultats inférieurs à ceux
   attendus pour ce profil d'élèves.**
 
-**La règle de priorité (décision D-009).** Un collège est proposé pour un accompagnement prioritaire
+**La règle de priorité.** Un collège est proposé pour un accompagnement prioritaire
 si son IPS est inférieur à la médiane des collèges de l'académie **et** si sa valeur ajoutée est négative
 **aux deux sessions, 2024 et 2025**. Deux résultats de suite sont plus fiables qu'un seul, car la valeur
 ajoutée varie beaucoup d'une année à l'autre.

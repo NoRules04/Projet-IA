@@ -117,3 +117,15 @@ def test_liste_vide_si_aucun_college_eligible():
     liste = liste_prioritaire(df)
     assert liste.empty
     assert {"ordre_priorite", "uai", "va_2024", "va_2025", "va_moyenne"} <= set(liste.columns)
+
+
+def test_marquer_prioritaires_selon_la_regle():
+    from observatoire.priority import marquer_prioritaires, seuil_va
+
+    c = marquer_prioritaires(DEUX_SESSIONS, "C")
+    assert set(DEUX_SESSIONS.loc[c, "uai"]) == {"P1", "P2"}  # les deux sessions sont marquées
+    assert int(c.sum()) == 4
+    a = marquer_prioritaires(DEUX_SESSIONS, "A")
+    # X1 (VA -3 en 2024) est prioritaire en 2024 avec A, mais pas avec C.
+    assert bool(a[(DEUX_SESSIONS["uai"] == "X1") & (DEUX_SESSIONS["annee"] == 2024)].iloc[0])
+    assert (seuil_va("A"), seuil_va("B"), seuil_va("C")) == (0.0, -5.0, 0.0)
