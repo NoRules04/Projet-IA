@@ -5,7 +5,7 @@ import streamlit as st
 
 import commun
 from observatoire.priority import LIBELLES_REGLES, REGLE_RETENUE
-from observatoire.vues import fr, rentree_de_session, vue_ensemble
+from observatoire.vues import fr, qualifier_correlation, rentree_de_session, vue_ensemble
 
 df = commun.donnees_ou_arret()
 filtres = commun.filtres_courants()
@@ -98,7 +98,6 @@ fig.update_layout(
     hoverlabel=dict(bgcolor="white", font_color=commun.ENCRE),
 )
 st.plotly_chart(fig, width="stretch")
-commun.source([session])
 
 # --- Lecture en texte (l'information ne dépend pas du graphique) -----------------------------
 if regle == "C":
@@ -125,16 +124,17 @@ if r["r_ips_taux"] is None:
     st.info("Sélection trop petite (moins de 10 collèges) pour calculer une corrélation fiable.")
 else:
     k1, k2 = st.columns(2)
-    k1.metric("Lien IPS / taux de réussite brut", f"r = {fr(r['r_ips_taux'], 2)}")
-    k2.metric("Lien IPS / valeur ajoutée", f"r = {fr(r['r_ips_va'], 2)}")
+    k1.metric("IPS et taux de réussite brut", qualifier_correlation(r["r_ips_taux"]))
+    k2.metric("IPS et valeur ajoutée", qualifier_correlation(r["r_ips_va"]))
     st.markdown(
         "Le **taux de réussite brut** suit de près le milieu social : plus l'IPS est élevé, plus le taux est élevé. "
         "Le comparer entre collèges reviendrait surtout à comparer leurs publics. La **valeur ajoutée** tient compte "
         "du profil des élèves : son lien avec l'IPS est bien plus faible. C'est pourquoi l'outil s'appuie sur elle.\n\n"
         "*r est le coefficient de corrélation : 0 = aucun lien linéaire, 1 ou -1 = lien parfait. "
-        "Une corrélation décrit un lien, elle ne prouve pas une cause.*"
+        "Le mot suit une règle fixe, appliquée à la valeur absolue de r : moins de 0,10 = lien quasi nul ; "
+        "de 0,10 à moins de 0,30 = faible ; de 0,30 à moins de 0,50 = modéré ; 0,50 ou plus = fort "
+        "(seuils usuels de Cohen). Une corrélation décrit un lien, elle ne prouve pas une cause.*"
     )
-    commun.source([session])
 
 with st.expander("Voir les données du graphique (tableau)"):
     tableau = points.assign(
@@ -150,4 +150,6 @@ with st.expander("Voir les données du graphique (tableau)"):
             "nb_candidats_g": "Candidats", "prioritaire": "Prioritaire", "uai": "UAI",
         },
     )
-    commun.source([session])
+
+st.divider()
+commun.source([session])  # source du graphique, des corrélations et du tableau

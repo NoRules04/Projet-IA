@@ -95,6 +95,22 @@ def fr(valeur: float | None, decimales: int = 1) -> str:
     return f"{valeur:,.{decimales}f}".replace(",", " ").replace(".", ",")
 
 
+# --- Corrélations en mots ----------------------------------------------------------------
+
+# Seuils conventionnels de Cohen (1988) sur la valeur absolue de r (D-013).
+SEUILS_CORRELATION = [(0.50, "Lien fort"), (0.30, "Lien modéré"), (0.10, "Lien faible"), (0.0, "Lien quasi nul")]
+
+
+def qualifier_correlation(r: float | None) -> str:
+    """« Lien fort (r = 0,73) ». Le mot est choisi sur la valeur ARRONDIE affichée (2 décimales),
+    pour que le mot et le chiffre ne se contredisent jamais. Le signe ne change pas le mot."""
+    if r is None or pd.isna(r):
+        return "Corrélation non calculable"
+    arrondi = round(float(r), 2)
+    mot = next(m for seuil, m in SEUILS_CORRELATION if abs(arrondi) >= seuil)
+    return f"{mot} (r = {fr(arrondi, 2)})"
+
+
 # --- Écran 2 : vue d'ensemble ---------------------------------------------------------
 
 MIN_POUR_CORRELATION = 10
@@ -124,3 +140,108 @@ def vue_ensemble(df: pd.DataFrame, filtres: Filtres, regle: str) -> tuple[pd.Dat
         "r_ips_va": places["ips"].corr(places["va_taux_reussite_g"]) if n >= MIN_POUR_CORRELATION else None,
     }
     return places, resume
+
+
+# --- Écran 3 : les quatre groupes --------------------------------------------------------
+
+def libelles_groupes(regle: str) -> dict[str, str]:
+    """Titres lisibles des groupes selon la règle (seuil 0 pour A et C, -5 pour B)."""
+    from observatoire.priority import (
+        G_IPS_BAS_VA_OK, G_IPS_HAUT_VA_BASSE, G_IPS_HAUT_VA_OK, G_MANQUANT, G_PRIORITAIRE,
+    )
+
+    sous, dessus = ("VA ≤ -5", "VA > -5") if regle == "B" else ("VA négative", "VA positive ou nulle")
+    return {
+        G_PRIORITAIRE: f"IPS bas · {sous}",
+        G_IPS_BAS_VA_OK: f"IPS bas · {dessus}",
+        G_IPS_HAUT_VA_BASSE: f"IPS haut · {sous}",
+        G_IPS_HAUT_VA_OK: f"IPS haut · {dessus}",
+        G_MANQUANT: "Sans valeur ajoutée",
+    }
+
+
+def groupes_selection(df: pd.DataFrame, filtres: Filtres, regle: str) -> dict:
+    """Effectifs des groupes pour la sélection et la session choisies (médiane : toute l'académie).
+
+    Règle C : groupes de la session au seuil 0 (comme A) ; `n_repetes` compte, dans le groupe
+    « IPS bas · VA négative », les collèges qui y sont aussi à l'autre session (= liste prioritaire).
+    """
+    from observatoire.priority import GROUPES, G_MANQUANT, G_PRIORITAIRE, classer_session, marquer_prioritaires
+
+    classe = classer_session(df, "B" if regle == "B" else "A")
+    classe["prioritaire_c"] = marquer_prioritaires(df, "C")
+    selection = appliquer_filtres(classe, filtres)
+    effectifs = {g: int((selection["groupe"] == g).sum()) for g in GROUPES}
+    deux_sessions = appliquer_filtres(classe, filtres, toutes_sessions=True)
+    tableau = (
+        pd.crosstab(deux_sessions["annee"], deux_sessions["groupe"]).reindex(columns=GROUPES, fill_value=0)
+        if not deux_sessions.empty else pd.DataFrame(columns=GROUPES)
+    )
+    return {
+        "effectifs": effectifs,
+        "n_selection": len(selection),
+        "n_places": len(selection) - effectifs[G_MANQUANT],
+        "n_repetes": int(((selection["groupe"] == G_PRIORITAIRE) & selection["prioritaire_c"]).sum()),
+        "tableau": tableau,
+    }
+
+
+def part(n: int, total: int) -> str:
+    """« 23 % » ; « — » si le total est nul."""
+    return "—" if total == 0 else f"{round(100 * n / total)} %"
+
+
+# --- Écran 4 : liste prioritaire -------------------------------------------------------
+
+CHOIX_NOMBRE = {"10 premiers": 10, "20 premiers": 20, "Tous": None}
+
+
+def liste_selection(df: pd.DataFrame, filtres: Filtres) -> pd.DataFrame:
+    """Liste de la règle C calculée sur TOUTE l'académie, puis filtrée (département, secteur).
+
+    Le filtre de session ne s'applique pas : la règle porte sur les deux sessions.
+    L'ordre de priorité reste celui de l'académie.
+    """
+    from observatoire.priority import liste_prioritaire
+
+    liste = liste_prioritaire(df)
+    garde = liste["code_departement"].isin(filtres.departements) & liste["secteur"].isin(filtres.secteurs)
+    return liste[garde].reset_index(drop=True)
+
+
+def premiers_avec_egalites(liste: pd.DataFrame, n: int | None) -> tuple[pd.DataFrame, int]:
+    """Les n premiers de la liste (triée), plus tous ceux à égalité avec le n-ième (D-010).
+
+    Renvoie (lignes gardées, nombre de collèges ajoutés à cause d'une égalité).
+    """
+    if n is None or n >= len(liste):
+        return liste, 0
+    seuil = liste["va_moyenne"].iloc[n - 1]
+    garde = liste[liste["va_moyenne"] <= seuil]
+    return garde, len(garde) - n
+
+
+def table_liste(liste: pd.DataFrame, sessions: list[int], source: str | None = None) -> pd.DataFrame:
+    """Tableau lisible (titres en français) ; avec `source`, ajoute une colonne Source (pour le CSV)."""
+    colonnes = {
+        "ordre_priorite": "Ordre de priorité (académie)",
+        "nom_etablissement": "Collège",
+        "commune": "Commune",
+        "departement_lisible": "Département",
+        "secteur": "Secteur",
+        **{f"ips_{a}": f"IPS {a}" for a in sessions},
+        **{f"va_{a}": f"Valeur ajoutée {a} (points)" for a in sessions},
+        "va_moyenne": "Valeur ajoutée moyenne (points)",
+        "uai": "UAI",
+    }
+    table = liste.assign(
+        departement_lisible=liste["code_departement"] + " · " + liste["departement"].map(nom_propre)
+    )[list(colonnes)].rename(columns=colonnes)
+    if source is not None:
+        table["Source"] = source
+    return table.reset_index(drop=True)
+
+
+def csv_liste(table: pd.DataFrame) -> bytes:
+    """CSV pour un tableur français : séparateur « ; », virgule décimale, UTF-8 avec BOM (accents dans Excel)."""
+    return table.to_csv(sep=";", decimal=",", index=False).encode("utf-8-sig")
