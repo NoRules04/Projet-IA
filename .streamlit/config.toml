@@ -1,0 +1,11 @@
+# Configuration Streamlit du tableau de bord.
+
+[browser]
+# Ne pas envoyer de statistiques d'usage à Streamlit.
+gatherUsageStats = false
+
+[theme]
+# Thème clair imposé : les contrastes ont été choisis et vérifiés pour ce fond (D-011).
+base = "light"
+# Bleu foncé : contraste de 8,7:1 sur fond blanc (WCAG AA demande 4,5:1 pour le texte).
+primaryColor = "#1F4E79"
